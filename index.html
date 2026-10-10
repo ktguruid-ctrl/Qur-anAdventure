@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QUR'AN ADVENTURE — Misi Penyelamatan Ayat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #0f172a; /* Dark slate for outside the game */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        h1, h2, h3, .heading-font {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .arabic-text {
+            font-family: 'Amiri', serif;
+            line-height: 2;
+            direction: rtl;
+        }
+
+        /* 16:9 Aspect Ratio Container */
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 1280px;
+            aspect-ratio: 16 / 9;
+            background: linear-gradient(135deg, #064e3b 0%, #0f766e 100%); /* Magical Forest Base */
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 8px #d97706; /* Golden border */
+            overflow: hidden;
+        }
+
+        /* Background Environment Elements */
+        .stars-bg {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 50px 160px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 90px 40px, #ffffff, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            animation: twinkle 4s infinite;
+            opacity: 0.5;
+            z-index: 0;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+
+        .firefly {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background-color: #a3e635;
+            border-radius: 50%;
+            box-shadow: 0 0 10px 2px #a3e635;
+            animation: float 6s ease-in-out infinite alternate;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translate(30px, -50px); opacity: 0; }
+        }
+
+        /* Slide Control */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            transform: scale(0.95);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        /* Buttons */
+        .btn-custom {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 0 rgba(0,0,0,0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 rgba(0,0,0,0.3);
+            filter: brightness(1.1);
+        }
+        .btn-custom:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+        }
+
+        /* Map Elements */
+        .map-path {
+            position: absolute;
+            border: 8px dashed #fcd34d;
+            border-radius: 50%;
+            z-index: 1;
+            opacity: 0.6;
+        }
+        
+        .map-node {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Fredoka One';
+            font-size: 1.5rem;
+            z-index: 10;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.3), inset 0 -4px 0 rgba(0,0,0,0.2);
+        }
+        
+        .map-node.locked {
+            background-color: #94a3b8;
+            border: 4px solid #64748b;
+            color: #cbd5e1;
+            pointer-events: none;
+        }
+        
+        .map-node.unlocked {
+            background-color: #fbbf24;
+            border: 4px solid #f59e0b;
+            color: #78350f;
+            animation: pulse-node 2s infinite;
+        }
+
+        .map-node.completed {
+            background-color: #10b981;
+            border: 4px solid #059669;
+            color: white;
+        }
+
+        @keyframes pulse-node {
+            0% { transform: scale(1); box-shadow: 0 8px 0 rgba(0,0,0,0.3), 0 0 0 0 rgba(251, 191, 36, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 8px 0 rgba(0,0,0,0.3), 0 0 0 15px rgba(251, 191, 36, 0); }
+            100% { transform: scale(1); box-shadow: 0 8px 0 rgba(0,0,0,0.3), 0 0 0 0 rgba(251, 191, 36, 0); }
+        }
+
+        .river {
+            position: absolute;
+            background: linear-gradient(90deg, #0284c7, #38bdf8, #0284c7);
+            background-size: 200% 100%;
+            animation: flow 5s linear infinite;
+            z-index: 2;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        @keyframes flow {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+
+        .bridge {
+            position: absolute;
+            background-image: repeating-linear-gradient(90deg, #8b4513 0, #8b4513 10px, #a0522d 10px, #a0522d 20px);
+            z-index: 3;
+            border: 4px solid #5c2c00;
+            border-radius: 8px;
+            transition: opacity 1s, transform 1s;
+        }
+
+        /* Puzzle Pieces */
+        .verse-piece {
+            background-color: #ffffff;
+            border: 3px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            user-select: none;
+            display: inline-block;
+        }
+
+        .verse-piece:hover {
+            transform: scale(1.05);
+            border-color: #fbbf24;
+            background-color: #fef3c7;
+        }
+
+        .answer-slot {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 3px dashed #94a3b8;
+            border-radius: 12px;
+            min-width: 100px;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        /* Animations for correct/wrong */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+        .animate-shake {
+            animation: shake 0.5s;
+            border-color: #ef4444 !important;
+            background-color: rgba(239, 68, 68, 0.1) !important;
+        }
+
+        .animate-success {
+            border-color: #10b981 !important;
+            background-color: rgba(16, 185, 129, 0.2) !important;
+            box-shadow: 0 0 20px #10b981 !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <!-- Global Background Elements -->
+        <div class="stars-bg"></div>
+        <div class="firefly" style="top: 20%; left: 10%; animation-delay: 0s;"></div>
+        <div class="firefly" style="top: 60%; left: 80%; animation-delay: 2s;"></div>
+        <div class="firefly" style="top: 40%; left: 40%; animation-delay: 4s;"></div>
+        <div class="firefly" style="top: 80%; left: 20%; animation-delay: 1s;"></div>
+        <div class="firefly" style="top: 30%; left: 70%; animation-delay: 3s;"></div>
+
+        <!-- Global HUD (Top right) -->
+        <div id="hud" class="absolute top-4 right-4 z-50 hidden flex gap-4">
+            <div class="bg-indigo-900/80 border-2 border-indigo-400 px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                <i class="fa-solid fa-star text-yellow-400 animate-pulse text-xl"></i>
+                <span id="star-count" class="text-white font-bold text-xl font-['Fredoka_One']">0 / 6</span>
+            </div>
+        </div>
+
+        <!-- SLIDE 1: COVER -->
+        <div class="slide active p-8" id="slide-1">
+            <div class="flex-1 flex flex-col items-center justify-center text-center">
+                <!-- Glowing Aura -->
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-green-500/30 rounded-full blur-3xl -z-10"></div>
+                
+                <div class="bg-emerald-900/80 backdrop-blur-sm p-10 rounded-3xl border-4 border-yellow-500 shadow-[0_0_40px_rgba(234,179,8,0.3)] max-w-4xl relative">
+                    <!-- Explorer Character -->
+                    <div class="absolute -top-24 left-1/2 transform -translate-x-1/2 text-8xl text-yellow-400 drop-shadow-2xl">
+                        <div class="relative inline-block hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-user-astronaut"></i> <!-- Using astronaut as a cool explorer -->
+                            <i class="fa-solid fa-book-quran absolute -bottom-2 -right-4 text-5xl text-emerald-300"></i>
+                        </div>
+                    </div>
+
+                    <h1 class="text-6xl md:text-7xl text-white mb-2 drop-shadow-lg heading-font mt-8">
+                        <span class="text-yellow-400">QUR'AN</span> ADVENTURE
+                    </h1>
+                    <h2 class="text-3xl text-emerald-200 mb-8 font-bold tracking-wider">— Misi Penyelamatan Ayat —</h2>
+                    <p class="text-xl text-emerald-50 mb-10 font-semibold max-w-2xl mx-auto leading-relaxed">
+                        Harta karun terbesar adalah Kalamullah. Mari bertualang menyusun potongan ayat suci Al-Qur'an agar kembali utuh!
+                    </p>
+                    
+                    <button onclick="goToSlide(2)" class="btn-custom bg-yellow-500 hover:bg-yellow-400 text-emerald-900 text-3xl font-bold py-5 px-16 rounded-full heading-font inline-flex items-center gap-4">
+                        MULAI <i class="fa-solid fa-compass fa-spin-pulse"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: PETUNJUK -->
+        <div class="slide p-8" id="slide-2">
+            <div class="bg-indigo-900/90 w-full h-full rounded-3xl shadow-2xl border-4 border-indigo-400 flex flex-col p-8 relative overflow-hidden backdrop-blur-md">
+                <div class="absolute -right-10 -bottom-10 text-9xl text-indigo-700 opacity-30"><i class="fa-solid fa-map"></i></div>
+                
+                <h2 class="text-5xl text-yellow-400 mb-8 heading-font text-center drop-shadow-md"><i class="fa-solid fa-scroll text-emerald-400"></i> Petunjuk Misi</h2>
+                
+                <div class="flex-1 grid grid-cols-3 gap-8 items-center justify-center max-w-5xl mx-auto">
+                    <!-- Step 1 -->
+                    <div class="bg-indigo-800/80 p-6 rounded-2xl border-2 border-indigo-300 text-center relative hover:-translate-y-2 transition-transform shadow-lg">
+                        <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-indigo-900 w-12 h-12 rounded-full flex items-center justify-center text-2xl heading-font border-4 border-white">1</div>
+                        <div class="text-6xl text-emerald-400 mb-4 mt-4"><i class="fa-solid fa-map-location-dot"></i></div>
+                        <h3 class="text-2xl text-white font-bold mb-2">Ikuti Peta</h3>
+                        <p class="text-indigo-200">Kunjungi setiap titik lokasi di hutan ajaib untuk menemukan ayat yang teracak.</p>
+                    </div>
+                    <!-- Step 2 -->
+                    <div class="bg-indigo-800/80 p-6 rounded-2xl border-2 border-indigo-300 text-center relative hover:-translate-y-2 transition-transform shadow-lg">
+                        <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-indigo-900 w-12 h-12 rounded-full flex items-center justify-center text-2xl heading-font border-4 border-white">2</div>
+                        <div class="text-6xl text-blue-400 mb-4 mt-4"><i class="fa-solid fa-puzzle-piece"></i></div>
+                        <h3 class="text-2xl text-white font-bold mb-2">Susun Ayat</h3>
+                        <p class="text-indigo-200">Klik potongan ayat Arab dari kanan ke kiri sesuai urutan yang benar.</p>
+                    </div>
+                    <!-- Step 3 -->
+                    <div class="bg-indigo-800/80 p-6 rounded-2xl border-2 border-indigo-300 text-center relative hover:-translate-y-2 transition-transform shadow-lg">
+                        <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-indigo-900 w-12 h-12 rounded-full flex items-center justify-center text-2xl heading-font border-4 border-white">3</div>
+                        <div class="text-6xl text-yellow-400 mb-4 mt-4"><i class="fa-solid fa-chest"></i></div>
+                        <h3 class="text-2xl text-white font-bold mb-2">Buka Harta</h3>
+                        <p class="text-indigo-200">Selesaikan 6 tantangan untuk membuka jembatan dan Gua Harta Karun!</p>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center mt-6">
+                    <button onclick="goToSlide(3)" class="btn-custom bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-4 px-12 rounded-full text-2xl">
+                        MENGERTI, LANJUT! <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: MATERI SINGKAT -->
+        <div class="slide p-8" id="slide-3">
+            <div class="bg-emerald-900/95 w-full h-full rounded-3xl shadow-2xl border-4 border-emerald-400 flex flex-col p-8 relative overflow-hidden backdrop-blur-md text-center">
+                <h2 class="text-4xl text-yellow-400 mb-4 heading-font"><i class="fa-solid fa-book-open text-white mr-2"></i> Bekal Perjalanan</h2>
+                <p class="text-xl text-emerald-100 mb-6 max-w-3xl mx-auto">Ingat kembali susunan ayat dari Surah Al-Ikhlas dan Al-Kautsar ini sebelum bertualang.</p>
+                
+                <div class="flex-1 flex gap-8 justify-center">
+                    <!-- Surah Al-Ikhlas -->
+                    <div class="bg-white p-6 rounded-2xl w-1/2 shadow-xl border-4 border-indigo-300 flex flex-col">
+                        <h3 class="text-2xl font-bold text-indigo-800 mb-4 heading-font border-b-2 border-indigo-100 pb-2">Surah Al-Ikhlas</h3>
+                        <div class="arabic-text text-3xl text-gray-800 space-y-4 flex-1 flex flex-col justify-center">
+                            <p>١. قُلْ هُوَ ٱللَّهُ أَحَدٌ</p>
+                            <p>٢. ٱللَّهُ ٱلصَّمَدُ</p>
+                            <p>٣. لَمْ يَلِدْ وَلَمْ يُولَدْ</p>
+                            <p>٤. وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ</p>
+                        </div>
+                    </div>
+                    <!-- Surah Al-Kautsar -->
+                    <div class="bg-white p-6 rounded-2xl w-1/2 shadow-xl border-4 border-teal-300 flex flex-col">
+                        <h3 class="text-2xl font-bold text-teal-800 mb-4 heading-font border-b-2 border-teal-100 pb-2">Surah Al-Kautsar (Sebagian)</h3>
+                        <div class="arabic-text text-3xl text-gray-800 space-y-4 flex-1 flex flex-col justify-center">
+                            <p>١. إِنَّآ أَعْطَيْنَٰكَ ٱلْكَوْثَرَ</p>
+                            <p>٢. فَصَلِّ لِرَبِّكَ وَٱنْحَرْ</p>
+                            <p class="text-sm text-gray-400">(Ayat 3 tidak masuk misi ini)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center mt-8">
+                    <button onclick="goToSlide(4)" class="btn-custom bg-yellow-500 hover:bg-yellow-400 text-emerald-900 font-bold py-4 px-12 rounded-full text-2xl heading-font">
+                        BUKA PETA LEVEL <i class="fa-solid fa-map-location-dot ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: PETA LEVEL -->
+        <div class="slide" id="slide-4">
+            <!-- Background Map Handled by parent container + CSS -->
+            <div class="w-full h-full relative">
+                <h2 class="absolute top-6 left-1/2 transform -translate-x-1/2 text-4xl text-white heading-font drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] z-20">
+                    PETA HUTAN AJAIB
+                </h2>
+
+                <!-- Environmental Details -->
+                <div class="absolute top-10 left-10 text-6xl text-green-700/50"><i class="fa-solid fa-tree"></i></div>
+                <div class="absolute bottom-20 left-20 text-7xl text-green-800/50"><i class="fa-solid fa-tree"></i></div>
+                <div class="absolute top-20 right-20 text-5xl text-green-600/50"><i class="fa-solid fa-tree"></i></div>
+                
+                <!-- River -->
+                <div class="river h-24 w-full top-1/2 transform -translate-y-1/2"></div>
+                
+                <!-- Bridge (Initially Hidden / Transparent) -->
+                <div id="map-bridge" class="bridge w-32 h-28 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 pointer-events-none transition-all duration-1000 scale-x-0"></div>
+
+                <!-- Treasure Cave -->
+                <div class="absolute right-10 top-1/2 transform -translate-y-1/2 -mt-10 text-center z-10">
+                    <i class="fa-solid fa-dungeon text-8xl text-gray-400 drop-shadow-xl" id="cave-icon"></i>
+                    <i class="fa-solid fa-chest text-5xl text-yellow-500 absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-4" id="chest-icon"></i>
+                </div>
+
+                <!-- Path & Nodes -->
+                <!-- Path lines -->
+                <svg class="absolute inset-0 w-full h-full z-0" style="pointer-events: none;">
+                    <path d="M 150 250 Q 300 150, 450 250 T 600 250" fill="transparent" stroke="#fcd34d" stroke-width="8" stroke-dasharray="15 15" opacity="0.6"/>
+                    <path id="path-bridge" d="M 600 250 L 750 250" fill="transparent" stroke="#ef4444" stroke-width="8" stroke-dasharray="15 15" opacity="0.3"/> <!-- Bridge path -->
+                    <path d="M 750 250 Q 900 350, 1050 250" fill="transparent" stroke="#fcd34d" stroke-width="8" stroke-dasharray="15 15" opacity="0.6"/>
+                </svg>
+
+                <!-- Nodes -->
+                <!-- Nodes layout: L1: x150 y250, L2: x300 y180, L3: x450 y250, L4: x750 y250, L5: x900 y320, L6: x1050 y250 -->
+                <div id="node-1" onclick="openLevel(1)" class="map-node unlocked" style="left: 120px; top: 220px;">1</div>
+                <div id="node-2" onclick="openLevel(2)" class="map-node locked" style="left: 290px; top: 155px;">2</div>
+                <div id="node-3" onclick="openLevel(3)" class="map-node locked" style="left: 420px; top: 220px;">3</div>
+                
+                <div id="node-4" onclick="openLevel(4)" class="map-node locked" style="left: 720px; top: 220px;">4</div>
+                <div id="node-5" onclick="openLevel(5)" class="map-node locked" style="left: 890px; top: 295px;">5</div>
+                <div id="node-6" onclick="openLevel(6)" class="map-node locked" style="left: 1020px; top: 220px;">6</div>
+
+                <div class="absolute bottom-6 left-6 z-20">
+                    <button onclick="goToSlide(3)" class="bg-gray-800/80 hover:bg-gray-700 text-white px-6 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 border-2 border-gray-500">
+                        <i class="fa-solid fa-arrow-left"></i> KEMBALI
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDES 5 - 10: TANTANGAN (Generated dynamically by JS, but placeholders here) -->
+        <div id="challenges-container">
+            <div class="slide p-8" id="slide-5"></div>
+            <div class="slide p-8" id="slide-6"></div>
+            <div class="slide p-8" id="slide-7"></div>
+            <div class="slide p-8" id="slide-8"></div>
+            <div class="slide p-8" id="slide-9"></div>
+            <div class="slide p-8" id="slide-10"></div>
+        </div>
+
+        <!-- SLIDE 11: FEEDBACK / TRANSISI -->
+        <div class="slide p-8" id="slide-11">
+            <div class="bg-indigo-900/95 w-full h-full rounded-3xl shadow-[0_0_50px_rgba(59,130,246,0.5)] border-4 border-blue-400 flex flex-col items-center justify-center p-8 relative overflow-hidden">
+                <!-- Sunburst Background -->
+                <div class="absolute inset-0 z-0 flex items-center justify-center opacity-20">
+                    <div class="w-[200%] h-[200%] bg-[conic-gradient(from_0deg,transparent_0_15deg,#ffffff_15deg_30deg,transparent_30deg_45deg,#ffffff_45deg_60deg,transparent_60deg_75deg,#ffffff_75deg_90deg,transparent_90deg_105deg,#ffffff_105deg_120deg,transparent_120deg_135deg,#ffffff_135deg_150deg,transparent_150deg_165deg,#ffffff_165deg_180deg,transparent_180deg_195deg,#ffffff_195deg_210deg,transparent_210deg_225deg,#ffffff_225deg_240deg,transparent_240deg_255deg,#ffffff_255deg_270deg,transparent_270deg_285deg,#ffffff_285deg_300deg,transparent_300deg_315deg,#ffffff_315deg_330deg,transparent_330deg_345deg,#ffffff_345deg_360deg)] animate-[spin_20s_linear_infinite]"></div>
+                </div>
+
+                <div class="z-10 text-center">
+                    <div id="feedback-icon" class="text-9xl text-yellow-400 mb-6 drop-shadow-xl animate-bounce">
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                    <h2 id="feedback-title" class="text-5xl text-white mb-4 heading-font drop-shadow-lg">Alhamdulillah!</h2>
+                    <p id="feedback-msg" class="text-2xl text-blue-200 mb-10 font-bold max-w-2xl mx-auto">
+                        Kamu berhasil menyusun ayat dengan benar. Bintang berhasil didapatkan!
+                    </p>
+                    
+                    <button id="feedback-btn" onclick="returnToMap()" class="btn-custom bg-blue-500 hover:bg-blue-400 text-white font-bold py-4 px-12 rounded-full text-2xl border-2 border-blue-300">
+                        LANJUT KE PETA <i class="fa-solid fa-map ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 12: KEMENANGAN -->
+        <div class="slide p-8" id="slide-12">
+            <div class="bg-gradient-to-b from-yellow-100 to-yellow-400 w-full h-full rounded-3xl shadow-2xl border-8 border-yellow-500 flex flex-col items-center justify-center p-8 relative overflow-hidden">
+                
+                <!-- Confetti Background (CSS based) -->
+                <div class="absolute inset-0 pointer-events-none opacity-50" style="background-image: radial-gradient(#ef4444 4px, transparent 4px), radial-gradient(#3b82f6 4px, transparent 4px), radial-gradient(#22c55e 4px, transparent 4px); background-size: 60px 60px, 80px 80px, 100px 100px; background-position: 0 0, 30px 30px, 50px 50px; animation: moveRoad 10s linear infinite;"></div>
+                
+                <style>
+                    @keyframes moveRoad {
+                        0% { background-position: 0 0, 30px 30px, 50px 50px; }
+                        100% { background-position: 0 1000px, 30px 1030px, 50px 1050px; }
+                    }
+                </style>
+
+                <div class="bg-white/90 backdrop-blur-sm p-10 rounded-3xl shadow-2xl text-center z-10 relative border-4 border-yellow-200 max-w-3xl">
+                    <div class="absolute -top-20 left-1/2 transform -translate-x-1/2">
+                        <div class="text-9xl text-yellow-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)] animate-pulse">
+                            <i class="fa-solid fa-box-open"></i> <!-- Open chest -->
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-5xl text-gray-800 mb-4 mt-12 heading-font text-emerald-700">Masya Allah, Berhasil!</h2>
+                    <p class="text-2xl text-gray-700 mb-6 font-bold">
+                        Kamu telah menyelamatkan seluruh susunan ayat dan mengumpulkan 6 Bintang!
+                    </p>
+                    
+                    <div class="flex justify-center gap-4 mb-8 text-4xl text-yellow-500">
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+
+                    <h3 class="text-3xl text-indigo-600 font-bold heading-font mb-2">Gelar: Master Tajwid & Hafiz Cilik</h3>
+                    <p class="text-lg text-gray-600 mb-8 max-w-md mx-auto">Teruslah membaca dan menghafal Al-Qur'an. Al-Qur'an adalah harta karun sesungguhnya!</p>
+                    
+                    <button onclick="resetGame()" class="btn-custom bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 px-12 rounded-full text-2xl inline-flex items-center gap-3">
+                        <i class="fa-solid fa-rotate-right"></i> MAIN LAGI
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Data Level / Misi
+        // Note: The array order is logical LTR, which means when placed in RTL container,
+        // parts[0] is visually rightmost (first word), parts[1] is to its left, etc.
+        const levelData = [
+            {
+                id: 1,
+                surah: "Al-Ikhlas",
+                ayat: 1,
+                title: "Misi 1: Awal yang Sempurna",
+                parts: ["قُلْ", "هُوَ ٱللَّهُ", "أَحَدٌ"], 
+                // correct logic: index 0 must be in slot 0, index 1 in slot 1.
+                hint: "Diawali dengan kata 'Katakanlah' (قُلْ)."
+            },
+            {
+                id: 2,
+                surah: "Al-Ikhlas",
+                ayat: 2,
+                title: "Misi 2: Tempat Bergantung",
+                parts: ["ٱللَّهُ", "ٱلصَّمَدُ"],
+                hint: "Dimulai dengan Asma Allah."
+            },
+            {
+                id: 3,
+                surah: "Al-Ikhlas",
+                ayat: 3,
+                title: "Misi 3: Jembatan Menuju Kautsar",
+                parts: ["لَمْ يَلِدْ", "وَلَمْ", "يُولَدْ"],
+                hint: "Kata pertama adalah 'Lam yalid' (لَمْ يَلِدْ)."
+            },
+            {
+                id: 4,
+                surah: "Al-Ikhlas",
+                ayat: 4,
+                title: "Misi 4: Tiada Sekutu",
+                parts: ["وَلَمْ يَكُن", "لَّهُۥ كُفُوًا", "أَحَدٌۢ"],
+                hint: "Diawali dengan 'Wa lam yakul' (وَلَمْ يَكُن)."
+            },
+            {
+                id: 5,
+                surah: "Al-Kautsar",
+                ayat: 1,
+                title: "Misi 5: Nikmat yang Banyak",
+                parts: ["إِنَّآ", "أَعْطَيْنَٰكَ", "ٱلْكَوْثَرَ"],
+                hint: "Dimulai dengan 'Inna' (إِنَّآ)."
+            },
+            {
+                id: 6,
+                surah: "Al-Kautsar",
+                ayat: 2,
+                title: "Misi 6: Perintah Salat & Kurban",
+                parts: ["فَصَلِّ", "لِرَبِّكَ", "وَٱنْحَرْ"],
+                hint: "Diawali dengan 'Maka laksanakanlah salat' (فَصَلِّ)."
+            }
+        ];
+
+        // Game State
+        let currentSlide = 1;
+        let unlockedLevels = 1;
+        let completedLevels = 0;
+        let activeLevel = null;
+        
+        // Active puzzle state
+        let currentPuzzleParts = []; // The original array order
+        let availablePieces = [];    // Array of indices currently available
+        let slottedPieces = [];      // Array of indices currently in answers slots [null, null, ...]
+
+        // DOM Elements
+        const hud = document.getElementById('hud');
+        const starCount = document.getElementById('star-count');
+
+        function goToSlide(num) {
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            document.getElementById(`slide-${num}`).classList.add('active');
+            currentSlide = num;
+
+            // Show HUD on map and challenges
+            if (num >= 4 && num <= 10) {
+                hud.classList.remove('hidden');
+            } else {
+                hud.classList.add('hidden');
+            }
+        }
+
+        function updateMapUI() {
+            starCount.innerText = `${completedLevels} / 6`;
+
+            for (let i = 1; i <= 6; i++) {
+                const node = document.getElementById(`node-${i}`);
+                if (!node) continue;
+
+                node.classList.remove('locked', 'unlocked', 'completed');
+                
+                if (i <= completedLevels) {
+                    node.classList.add('completed');
+                    node.innerHTML = '<i class="fa-solid fa-check"></i>';
+                } else if (i === unlockedLevels) {
+                    node.classList.add('unlocked');
+                    node.innerHTML = i;
+                } else {
+                    node.classList.add('locked');
+                    node.innerHTML = '<i class="fa-solid fa-lock text-sm"></i>';
+                }
+            }
+
+            // Bridge Logic
+            const bridge = document.getElementById('map-bridge');
+            const pathBridge = document.getElementById('path-bridge');
+            if (completedLevels >= 3) {
+                bridge.style.opacity = '1';
+                bridge.style.transform = 'translate(-50%, -50%) scaleX(1)';
+                pathBridge.style.stroke = '#fcd34d'; // Change path to yellow
+            } else {
+                bridge.style.opacity = '0';
+                bridge.style.transform = 'translate(-50%, -50%) scaleX(0)';
+                pathBridge.style.stroke = '#ef4444'; // Red path meaning broken
+            }
+        }
+
+        function openLevel(id) {
+            if (id > unlockedLevels) return; // Locked
+            
+            activeLevel = id;
+            buildLevelUI(id);
+            goToSlide(id + 4); // slide 5 is level 1, etc.
+        }
+
+        function returnToMap() {
+            updateMapUI();
+            
+            if (completedLevels === 6) {
+                // All complete, go to victory
+                setTimeout(() => {
+                    goToSlide(12);
+                }, 500);
+            } else {
+                goToSlide(4);
+            }
+        }
+
+        function buildLevelUI(id) {
+            const level = levelData[id - 1];
+            const slideId = `slide-${id + 4}`;
+            const container = document.getElementById(slideId);
+            
+            // Initialize puzzle state
+            currentPuzzleParts = [...level.parts];
+            
+            // Shuffle for available pieces
+            let indices = Array.from({length: level.parts.length}, (_, i) => i);
+            availablePieces = shuffleArray(indices);
+            slottedPieces = new Array(level.parts.length).fill(null);
+
+            renderPuzzle(container, level);
+        }
+
+        function renderPuzzle(container, level) {
+            let answerSlotsHTML = '';
+            for(let i=0; i<level.parts.length; i++) {
+                const slottedIdx = slottedPieces[i];
+                if (slottedIdx !== null) {
+                    // There is a piece here
+                    answerSlotsHTML += `
+                        <div class="answer-slot bg-white border-solid border-emerald-400" onclick="unslotPiece(${i}, ${level.id})">
+                            <span class="verse-piece w-full h-full m-0 border-0 shadow-none bg-transparent hover:bg-transparent hover:scale-100">${currentPuzzleParts[slottedIdx]}</span>
+                        </div>
+                    `;
+                } else {
+                    // Empty slot
+                    answerSlotsHTML += `<div class="answer-slot"></div>`;
+                }
+            }
+
+            let availablePiecesHTML = '';
+            availablePieces.forEach(idx => {
+                availablePiecesHTML += `
+                    <button class="verse-piece m-2" onclick="slotPiece(${idx}, ${level.id})">
+                        ${currentPuzzleParts[idx]}
+                    </button>
+                `;
+            });
+
+            container.innerHTML = `
+                <div class="bg-indigo-900/90 w-full h-full rounded-3xl shadow-2xl border-4 border-indigo-400 flex flex-col p-8 relative backdrop-blur-md">
+                    
+                    <!-- Header -->
+                    <div class="flex justify-between items-center border-b-2 border-indigo-500/50 pb-4 mb-6">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-yellow-400 text-indigo-900 w-12 h-12 rounded-full flex items-center justify-center text-2xl heading-font border-4 border-white shadow-lg">
+                                ${level.id}
+                            </div>
+                            <div>
+                                <h2 class="text-3xl text-white heading-font">${level.title}</h2>
+                                <p class="text-indigo-200 font-bold">Surah ${level.surah} : Ayat ${level.ayat}</p>
+                            </div>
+                        </div>
+                        <button onclick="goToSlide(4)" class="btn-custom bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-full flex items-center gap-2">
+                            <i class="fa-solid fa-map"></i> KEMBALI
+                        </button>
+                    </div>
+
+                    <!-- Game Area -->
+                    <div class="flex-1 flex flex-col items-center justify-center">
+                        <p class="text-emerald-300 mb-4 font-bold text-xl"><i class="fa-solid fa-circle-info mr-2"></i> Susun dari Kanan ke Kiri</p>
+                        
+                        <!-- Answer Zone (RTL) -->
+                        <div id="answer-zone-${level.id}" class="bg-indigo-950 p-6 rounded-2xl w-full max-w-4xl min-h-[140px] flex gap-4 justify-center items-center shadow-inner border-2 border-indigo-800 mb-8" dir="rtl">
+                            ${answerSlotsHTML}
+                        </div>
+
+                        <!-- Available Pieces Box -->
+                        <div class="bg-indigo-800/50 p-6 rounded-2xl w-full max-w-4xl min-h-[140px] border-2 border-indigo-600/50 text-center">
+                            <p class="text-indigo-300 mb-4 text-sm uppercase tracking-widest font-bold">Pilih Potongan Ayat:</p>
+                            <div class="flex flex-wrap justify-center gap-4 arabic-text" dir="rtl">
+                                ${availablePiecesHTML}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="flex justify-between items-center mt-4 border-t-2 border-indigo-500/50 pt-4">
+                        <button onclick="showHint('${level.hint}')" class="btn-custom bg-blue-500 hover:bg-blue-400 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2">
+                            <i class="fa-solid fa-lightbulb"></i> PETUNJUK
+                        </button>
+                        
+                        <button onclick="resetPuzzle(${level.id})" class="btn-custom bg-red-500 hover:bg-red-400 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2">
+                            <i class="fa-solid fa-rotate-right"></i> ULANGI
+                        </button>
+                    </div>
+                    
+                    <!-- Hint Modal Overlay (hidden by default) -->
+                    <div id="hint-modal-${level.id}" class="absolute inset-0 bg-black/80 z-50 hidden items-center justify-center rounded-3xl">
+                        <div class="bg-white p-8 rounded-2xl max-w-md text-center border-4 border-blue-400">
+                            <i class="fa-solid fa-lightbulb text-6xl text-yellow-400 mb-4 animate-pulse"></i>
+                            <h3 class="text-2xl heading-font text-blue-800 mb-2">Petunjuk:</h3>
+                            <p class="text-xl text-gray-700 mb-6 font-bold" id="hint-text-${level.id}"></p>
+                            <button onclick="hideHint(${level.id})" class="btn-custom bg-blue-500 text-white font-bold py-2 px-8 rounded-full">TUTUP</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function slotPiece(pieceIndex, levelId) {
+            // Find first empty slot
+            const emptySlotIndex = slottedPieces.indexOf(null);
+            if (emptySlotIndex !== -1) {
+                // Move from available to slotted
+                slottedPieces[emptySlotIndex] = pieceIndex;
+                availablePieces = availablePieces.filter(idx => idx !== pieceIndex);
+                
+                // Re-render
+                const container = document.getElementById(`slide-${levelId + 4}`);
+                renderPuzzle(container, levelData[levelId - 1]);
+
+                // Check if full
+                if (!slottedPieces.includes(null)) {
+                    checkAnswer(levelId);
+                }
+            }
+        }
+
+        function unslotPiece(slotIndex, levelId) {
+            const pieceIndex = slottedPieces[slotIndex];
+            if (pieceIndex !== null) {
+                // Return to available
+                slottedPieces[slotIndex] = null;
+                availablePieces.push(pieceIndex);
+                
+                // Re-render
+                const container = document.getElementById(`slide-${levelId + 4}`);
+                renderPuzzle(container, levelData[levelId - 1]);
+            }
+        }
+
+        function resetPuzzle(levelId) {
+            buildLevelUI(levelId);
+        }
+
+        function showHint(text) {
+            const modal = document.getElementById(`hint-modal-${activeLevel}`);
+            const hintText = document.getElementById(`hint-text-${activeLevel}`);
+            hintText.innerText = text;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideHint(levelId) {
+            const modal = document.getElementById(`hint-modal-${levelId}`);
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function checkAnswer(levelId) {
+            const answerZone = document.getElementById(`answer-zone-${levelId}`);
+            
+            // Check if slottedPieces matches [0, 1, 2, ...]
+            let isCorrect = true;
+            for(let i=0; i<slottedPieces.length; i++) {
+                if (slottedPieces[i] !== i) {
+                    isCorrect = false;
+                    break;
+                }
+            }
+
+            if (isCorrect) {
+                // Correct!
+                answerZone.classList.add('animate-success');
+                
+                // Update progression
+                if (levelId === unlockedLevels) {
+                    completedLevels++;
+                    if (unlockedLevels < 6) unlockedLevels++;
+                }
+
+                setTimeout(() => {
+                    showFeedback(levelId);
+                }, 1000);
+            } else {
+                // Wrong
+                answerZone.classList.add('animate-shake');
+                setTimeout(() => {
+                    answerZone.classList.remove('animate-shake');
+                    // Optional: automatically reset on wrong answer
+                    // resetPuzzle(levelId);
+                }, 600);
+            }
+        }
+
+        function showFeedback(levelId) {
+            const title = document.getElementById('feedback-title');
+            const msg = document.getElementById('feedback-msg');
+            const icon = document.getElementById('feedback-icon');
+
+            if (levelId === 3) {
+                title.innerText = "Luar Biasa!";
+                msg.innerText = "Kamu menyelesaikan area pertama. Lihat! Jembatan menuju gua terbuka!";
+                icon.innerHTML = '<i class="fa-solid fa-bridge-water"></i>';
+            } else if (levelId === 6) {
+                title.innerText = "Sempurna!";
+                msg.innerText = "Ayat terakhir berhasil diselamatkan. Harta Karun telah menantimu!";
+                icon.innerHTML = '<i class="fa-solid fa-key"></i>';
+            } else {
+                title.innerText = "Alhamdulillah!";
+                msg.innerText = "Susunan ayat benar. Kamu mendapatkan Bintang!";
+                icon.innerHTML = '<i class="fa-solid fa-star"></i>';
+            }
+
+            goToSlide(11);
+        }
+
+        function shuffleArray(array) {
+            let currentIndex = array.length, randomIndex;
+            // While there remain elements to shuffle.
+            while (currentIndex > 0) {
+                // Pick a remaining element.
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                // And swap it with the current element.
+                [array[currentIndex], array[randomIndex]] = [
+                    array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function resetGame() {
+            unlockedLevels = 1;
+            completedLevels = 0;
+            updateMapUI();
+            goToSlide(1);
+        }
+
+        // Initialize map on load
+        window.onload = () => {
+            updateMapUI();
+        };
+
+    </script>
+</body>
+</html>
